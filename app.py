@@ -1,5 +1,5 @@
-# Medical Insurance Cost Prediction - Streamlit App (Regression)
-# Academic, Multi-page, Streamlit Cloud Ready
+# Medical Insurance Charges Estimator
+# Streamlit | Regression | Academic Project (Unique Version)
 
 import streamlit as st
 import pandas as pd
@@ -9,114 +9,160 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
-st.set_page_config(page_title="Medical Insurance Cost Prediction", layout="wide")
+st.set_page_config(
+    page_title="Insurance Charges Estimator",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Load files
+# ---------------- LOAD MODEL ----------------
 @st.cache_resource
-def load_model():
-    model = joblib.load("model.pkl")
-    preprocessor = joblib.load("preprocessor.pkl")
-    return model, preprocessor
+def load_artifacts():
+    reg_model = joblib.load("model.pkl")
+    data_preprocessor = joblib.load("preprocessor.pkl")
+    return reg_model, data_preprocessor
 
-model, preprocessor = load_model()
-df = pd.read_csv("insurance.csv")
+model, preprocessor = load_artifacts()
+
+# Load data
+data = pd.read_csv("insurance.csv")
 metrics_df = pd.read_csv("model_metrics.csv")
 
-# Sidebar Navigation
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overview", "EDA", "Model Metrics", "Prediction"])
+# ---------------- SIDEBAR ----------------
+st.sidebar.title("📌 App Menu")
+page = st.sidebar.radio(
+    "Select Section",
+    ["Project Overview", "Data Exploration", "Model Performance", "Cost Estimator"]
+)
 
-# ---------------- OVERVIEW PAGE ----------------
-if page == "Overview":
-    st.title("Medical Insurance Cost Prediction Using Machine Learning")
+# ---------------- OVERVIEW ----------------
+if page == "Project Overview":
+    st.title("💊 Medical Insurance Cost Estimation System")
 
-    st.subheader("Project Description")
-    st.write("This project aims to predict medical insurance charges based on demographic and lifestyle features using supervised regression models. The system helps estimate expected insurance cost for individuals.")
+    st.markdown(
+        """
+        This application predicts **annual medical insurance charges** using
+        machine learning regression techniques based on demographic and lifestyle data.
+        """
+    )
 
-    st.subheader("Dataset Information")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Rows", df.shape[0])
-    col2.metric("Total Columns", df.shape[1])
-    col3.metric("Missing Values", df.isnull().sum().sum())
+    col1.metric("Records", data.shape[0])
+    col2.metric("Features", data.shape[1])
+    col3.metric("Missing Entries", data.isnull().sum().sum())
 
-    st.subheader("Dataset Preview")
-    st.dataframe(df.head(20))
+    st.subheader("Sample Records")
+    st.dataframe(data.sample(15, random_state=1))
 
-    st.subheader("Summary Statistics")
-    st.dataframe(df.describe())
+    st.subheader("Statistical Summary")
+    st.dataframe(data.describe())
 
-# ---------------- EDA PAGE ----------------
-elif page == "EDA":
-    st.title("Exploratory Data Analysis")
+# ---------------- EDA ----------------
+elif page == "Data Exploration":
+    st.title("📊 Exploratory Data Analysis")
 
-    st.subheader("Target Variable Distribution")
-    fig, ax = plt.subplots()
-    sns.histplot(df['charges'], kde=True, ax=ax)
-    st.pyplot(fig)
+    st.subheader("Distribution of Insurance Charges")
+    fig1, ax1 = plt.subplots()
+    sns.histplot(data["charges"], bins=40, kde=True, color="teal", ax=ax1)
+    st.pyplot(fig1)
 
-    st.subheader("Feature vs Target Analysis")
+    st.subheader("Impact of Smoking on Charges")
     fig2, ax2 = plt.subplots()
-    sns.scatterplot(x=df['age'], y=df['charges'], ax=ax2)
+    sns.boxplot(x="smoker", y="charges", data=data, palette="Set2", ax=ax2)
     st.pyplot(fig2)
 
-    st.subheader("Correlation Heatmap")
-    fig3, ax3 = plt.subplots(figsize=(8,6))
-    sns.heatmap(df.corr(), annot=True, cmap='coolwarm', ax=ax3)
+    st.subheader("Age vs Charges Trend")
+    fig3, ax3 = plt.subplots()
+    sns.scatterplot(
+        x="age",
+        y="charges",
+        data=data,
+        hue="smoker",
+        alpha=0.6,
+        ax=ax3
+    )
     st.pyplot(fig3)
 
-    st.subheader("Key Insights")
-    st.write("- Age and smoking status have strong impact on insurance charges.\n"
-             "- Higher BMI tends to increase medical cost.\n"
-             "- Smokers show significantly higher charges compared to non-smokers.")
-
-# ---------------- MODEL METRICS PAGE ----------------
-elif page == "Model Metrics":
-    st.title("Model Evaluation")
-
-    st.subheader("Model Comparison")
-    st.dataframe(metrics_df)
-
-    st.subheader("Best Model Performance")
-    y_true = df['charges']
-    X = df.drop('charges', axis=1)
-    X_transformed = preprocessor.transform(X)
-    y_pred = model.predict(X_transformed)
-
-    r2 = r2_score(y_true, y_pred)
-    mae = mean_absolute_error(y_true, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("R² Score", round(r2, 3))
-    col2.metric("MAE", round(mae, 2))
-    col3.metric("RMSE", round(rmse, 2))
-
-    st.subheader("Actual vs Predicted Plot")
-    fig4, ax4 = plt.subplots()
-    ax4.scatter(y_true, y_pred)
-    ax4.set_xlabel("Actual Charges")
-    ax4.set_ylabel("Predicted Charges")
+    st.subheader("Correlation Between Numeric Features")
+    numeric_data = data.select_dtypes(include="number")
+    fig4, ax4 = plt.subplots(figsize=(8, 6))
+    sns.heatmap(
+        numeric_data.corr(),
+        annot=True,
+        cmap="coolwarm",
+        fmt=".2f",
+        ax=ax4
+    )
     st.pyplot(fig4)
 
-    st.subheader("Hyperparameter Tuning")
-    st.write("GridSearchCV was used to tune model parameters to achieve optimal generalization performance.")
+    st.info(
+        """
+        **Observations:**
+        - Smoking status is the strongest cost driver.
+        - Age and BMI show positive correlation with insurance charges.
+        - Children count has minimal influence on cost.
+        """
+    )
 
-    st.subheader("Final Model Selection")
-    st.write("The final regression model was selected based on highest R² score and lowest RMSE on test data.")
+# ---------------- MODEL PERFORMANCE ----------------
+elif page == "Model Performance":
+    st.title("📈 Model Evaluation & Results")
 
-# ---------------- PREDICTION PAGE ----------------
-elif page == "Prediction":
-    st.title("Insurance Cost Prediction")
+    st.subheader("Regression Model Comparison")
+    st.dataframe(metrics_df)
 
-    age = st.number_input("Age", 18, 100)
-    sex = st.selectbox("Sex", ["male", "female"])
-    bmi = st.number_input("BMI", 10.0, 60.0)
-    children = st.number_input("Number of Children", 0, 5)
-    smoker = st.selectbox("Smoker", ["yes", "no"])
-    region = st.selectbox("Region", ["northeast", "northwest", "southeast", "southwest"])
+    X = data.drop("charges", axis=1)
+    y_actual = data["charges"]
 
-    if st.button("Predict Insurance Cost"):
-        input_df = pd.DataFrame({
+    X_processed = preprocessor.transform(X)
+    y_predicted = model.predict(X_processed)
+
+    r2 = r2_score(y_actual, y_predicted)
+    mae = mean_absolute_error(y_actual, y_predicted)
+    rmse = np.sqrt(mean_squared_error(y_actual, y_predicted))
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("R² Score", f"{r2:.3f}")
+    col2.metric("Mean Absolute Error", f"{mae:.2f}")
+    col3.metric("Root Mean Sq. Error", f"{rmse:.2f}")
+
+    st.subheader("Actual vs Predicted Charges")
+    fig5, ax5 = plt.subplots()
+    ax5.scatter(y_actual, y_predicted, alpha=0.5)
+    ax5.plot(
+        [y_actual.min(), y_actual.max()],
+        [y_actual.min(), y_actual.max()],
+        color="red",
+        linestyle="--"
+    )
+    ax5.set_xlabel("Actual Charges")
+    ax5.set_ylabel("Predicted Charges")
+    st.pyplot(fig5)
+
+    st.success(
+        "The final regression model was selected based on strong generalization "
+        "performance and minimal prediction error."
+    )
+
+# ---------------- PREDICTION ----------------
+elif page == "Cost Estimator":
+    st.title("🧮 Predict Your Insurance Charges")
+
+    with st.form("prediction_form"):
+        age = st.slider("Age", 18, 100, 30)
+        sex = st.selectbox("Gender", ["male", "female"])
+        bmi = st.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
+        children = st.selectbox("Number of Dependents", [0, 1, 2, 3, 4, 5])
+        smoker = st.radio("Smoking Habit", ["yes", "no"])
+        region = st.selectbox(
+            "Residential Region",
+            ["northeast", "northwest", "southeast", "southwest"]
+        )
+
+        submitted = st.form_submit_button("Estimate Cost")
+
+    if submitted:
+        user_input = pd.DataFrame({
             "age": [age],
             "sex": [sex],
             "bmi": [bmi],
@@ -125,8 +171,10 @@ elif page == "Prediction":
             "region": [region]
         })
 
-        input_transformed = preprocessor.transform(input_df)
-        prediction = model.predict(input_transformed)[0]
+        processed_input = preprocessor.transform(user_input)
+        estimated_cost = model.predict(processed_input)[0]
 
-        st.success(f"Estimated Medical Insurance Cost: ₹ {prediction:,.2f}")
-        st.info("This is the expected annual insurance charge based on the given personal details.")
+        st.success(f"💰 Estimated Annual Insurance Cost: ₹ {estimated_cost:,.2f}")
+        st.caption(
+            "Prediction is based on historical data patterns and trained ML regression model."
+        )

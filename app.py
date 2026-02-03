@@ -1,5 +1,5 @@
 # Medical Insurance Charges Estimator
-# Streamlit | Regression | Academic Project (Unique Version)
+# Streamlit | Regression | Academic Project (Updated for Python 3.11)
 
 import streamlit as st
 import pandas as pd
@@ -8,37 +8,50 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+import os
 
+# -------------------
+# Page Config
+# -------------------
 st.set_page_config(
     page_title="Insurance Charges Estimator",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ---------------- LOAD MODEL ----------------
+# -------------------
+# Load Model & Preprocessor
+# -------------------
 @st.cache_resource
 def load_artifacts():
-    reg_model = joblib.load("model.pkl")
-    data_preprocessor = joblib.load("preprocessor.pkl")
-    return reg_model, data_preprocessor
+    base_path = os.path.dirname(__file__)
+    model_path = os.path.join(base_path, "model.pkl")
+    preprocessor_path = os.path.join(base_path, "preprocessor.pkl")
+    data_path = os.path.join(base_path, "insurance.csv")
+    metrics_path = os.path.join(base_path, "model_metrics.csv")
 
-model, preprocessor = load_artifacts()
+    model = joblib.load(model_path)
+    preprocessor = joblib.load(preprocessor_path)
+    data = pd.read_csv(data_path)
+    metrics_df = pd.read_csv(metrics_path)
+    return model, preprocessor, data, metrics_df
 
-# Load data
-data = pd.read_csv("insurance.csv")
-metrics_df = pd.read_csv("model_metrics.csv")
+model, preprocessor, data, metrics_df = load_artifacts()
 
-# ---------------- SIDEBAR ----------------
+# -------------------
+# Sidebar Menu
+# -------------------
 st.sidebar.title("📌 App Menu")
 page = st.sidebar.radio(
     "Select Section",
     ["Project Overview", "Data Exploration", "Model Performance", "Cost Estimator"]
 )
 
-# ---------------- OVERVIEW ----------------
+# -------------------
+# Project Overview
+# -------------------
 if page == "Project Overview":
     st.title("💊 Medical Insurance Cost Estimation System")
-
     st.markdown(
         """
         This application predicts **annual medical insurance charges** using
@@ -57,7 +70,9 @@ if page == "Project Overview":
     st.subheader("Statistical Summary")
     st.dataframe(data.describe())
 
-# ---------------- EDA ----------------
+# -------------------
+# Data Exploration
+# -------------------
 elif page == "Data Exploration":
     st.title("📊 Exploratory Data Analysis")
 
@@ -73,26 +88,13 @@ elif page == "Data Exploration":
 
     st.subheader("Age vs Charges Trend")
     fig3, ax3 = plt.subplots()
-    sns.scatterplot(
-        x="age",
-        y="charges",
-        data=data,
-        hue="smoker",
-        alpha=0.6,
-        ax=ax3
-    )
+    sns.scatterplot(x="age", y="charges", hue="smoker", data=data, alpha=0.6, ax=ax3)
     st.pyplot(fig3)
 
     st.subheader("Correlation Between Numeric Features")
     numeric_data = data.select_dtypes(include="number")
     fig4, ax4 = plt.subplots(figsize=(8, 6))
-    sns.heatmap(
-        numeric_data.corr(),
-        annot=True,
-        cmap="coolwarm",
-        fmt=".2f",
-        ax=ax4
-    )
+    sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax4)
     st.pyplot(fig4)
 
     st.info(
@@ -104,7 +106,9 @@ elif page == "Data Exploration":
         """
     )
 
-# ---------------- MODEL PERFORMANCE ----------------
+# -------------------
+# Model Performance
+# -------------------
 elif page == "Model Performance":
     st.title("📈 Model Evaluation & Results")
 
@@ -129,12 +133,9 @@ elif page == "Model Performance":
     st.subheader("Actual vs Predicted Charges")
     fig5, ax5 = plt.subplots()
     ax5.scatter(y_actual, y_predicted, alpha=0.5)
-    ax5.plot(
-        [y_actual.min(), y_actual.max()],
-        [y_actual.min(), y_actual.max()],
-        color="red",
-        linestyle="--"
-    )
+    ax5.plot([y_actual.min(), y_actual.max()],
+             [y_actual.min(), y_actual.max()],
+             color="red", linestyle="--")
     ax5.set_xlabel("Actual Charges")
     ax5.set_ylabel("Predicted Charges")
     st.pyplot(fig5)
@@ -144,7 +145,9 @@ elif page == "Model Performance":
         "performance and minimal prediction error."
     )
 
-# ---------------- PREDICTION ----------------
+# -------------------
+# Cost Estimator
+# -------------------
 elif page == "Cost Estimator":
     st.title("🧮 Predict Your Insurance Charges")
 
@@ -154,10 +157,7 @@ elif page == "Cost Estimator":
         bmi = st.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
         children = st.selectbox("Number of Dependents", [0, 1, 2, 3, 4, 5])
         smoker = st.radio("Smoking Habit", ["yes", "no"])
-        region = st.selectbox(
-            "Residential Region",
-            ["northeast", "northwest", "southeast", "southwest"]
-        )
+        region = st.selectbox("Residential Region", ["northeast", "northwest", "southeast", "southwest"])
 
         submitted = st.form_submit_button("Estimate Cost")
 
